@@ -65,7 +65,7 @@ jar {
 
 // Disable remapping tasks to prevent obfuscation/class name changes
 remapJar.enabled = false
-remapSourcesJar.enabled = false
+remapSourcesJar.enabled = true
 
 publishing {
 	publications {
