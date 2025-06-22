@@ -18,97 +18,80 @@ version = project.mod_version
 group = project.maven_group
 
 base {
-    archivesName = project.archives_base_name
+	archivesName = project.archives_base_name
 }
 
 repositories {
-    mavenCentral()
-    maven { url = "https://maven.fabricmc.net/" }
-    maven { url = "https://jitpack.io" }
-}
-
-loom {
-    // Configure for library building
-    runs {
-        client {
-            property "fabric.development", "true"
-        }
-    }
-    
-    // Add this to help with duplicate key warnings
-    mods {
-        "easynet" {
-            sourceSet sourceSets.main
-        }
-    }
+	mavenCentral()
+	maven { url = "https://maven.fabricmc.net/" }
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:1.21"
-    mappings loom.officialMojangMappings()
-    modImplementation "net.fabricmc:fabric-loader:0.16.5"
-    
-    // Updated Fabric API version for MC 1.21
-    modImplementation "net.fabricmc.fabric-api:fabric-api:0.102.0+1.21"
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	modImplementation "net.fabricmc.fabric-api:fabric-api:0.99.5+1.21"
+	// Add more APIs as needed from https://github.com/FabricMC/fabric#modules
 }
 
 processResources {
-    inputs.property "version", project.version
+	inputs.property "version", project.version
 
-    filesMatching("fabric.mod.json") {
-        expand "version": inputs.properties.version
-    }
+	filesMatching("fabric.mod.json") {
+		expand "version": inputs.properties.version
+	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+	it.options.release = 21
 }
 
 java {
-    withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {
-    from("LICENSE") {
-        rename { "${it}_${project.archives_base_name}" }
-    }
-    
-    // Keep classes unobfuscated for library usage
-    archiveClassifier = 'dev'
+	from("LICENSE") {
+		rename { "${it}_${project.archives_base_name}" }
+	}
+	
+	// Keep classes unobfuscated for library usage
+	archiveClassifier = 'dev'
 }
 
-// Disable the default remapping tasks to prevent obfuscation
+// Disable remapping tasks to prevent obfuscation/class name changes
 remapJar.enabled = false
 remapSourcesJar.enabled = false
 
 publishing {
-    publications {
-        create("mavenJava", MavenPublication) {
-            groupId = project.maven_group
-            artifactId = project.archives_base_name
-            version = project.mod_version
-            
-            from components.java
-            
-            // Publish the unobfuscated jar for development use
-            artifact jar
-            artifact sourcesJar
-        }
-    }
-    
-    // Optional: Configure repositories for publishing
-    repositories {
-        // Add your publishing repositories here
-        // Example for GitHub Packages:
-        // maven {
-        //     name = "GitHubPackages"
-        //     url = "https://maven.pkg.github.com/yourusername/yourrepo"
-        //     credentials {
-        //         username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
-        //         password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
-        //     }
-        // }
-    }
+	publications {
+		create("mavenJava", MavenPublication) {
+			groupId = project.maven_group
+			artifactId = project.archives_base_name
+			version = project.mod_version
+			
+			from components.java
+			
+			// Publish the unobfuscated jar for development use
+			artifact jar
+			artifact sourcesJar
+		}
+	}
+	
+	// Optional: Configure repositories for publishing
+	repositories {
+		// Add your publishing repositories here if needed
+		// Example for GitHub Packages:
+		// maven {
+		//     name = "GitHubPackages"
+		//     url = "https://maven.pkg.github.com/yourusername/yourrepo"
+		//     credentials {
+		//         username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+		//         password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+		//     }
+		// }
+	}
 }
