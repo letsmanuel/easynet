@@ -41,9 +41,6 @@ loom {
             sourceSet sourceSets.main
         }
     }
-    
-    // Disable remapping to prevent obfuscation
-    remapArchives = false
 }
 
 dependencies {
@@ -82,10 +79,11 @@ jar {
     archiveClassifier = 'dev'
 }
 
-// Configure remapping for library distribution
-remapJar {
-    enabled = false  // Disable remapping to keep unobfuscated
-}
+// Disable the default remapping tasks to prevent obfuscation
+remapJar.enabled = false
+remapSourcesJar.enabled = false
+
+
 
 publishing {
     publications {
