@@ -28,17 +28,27 @@ repositories {
 }
 
 loom {
-    // This helps with cross-environment compatibility
+    // Configure for library building
     runs {
         client {
             property "fabric.development", "true"
         }
     }
+    
+    // Add this to help with duplicate key warnings
+    mods {
+        "easynet" {
+            sourceSet sourceSets.main
+        }
+    }
+    
+    // Disable remapping to prevent obfuscation
+    remapArchives = false
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:intermediary:${project.minecraft_version}"  // Using intermediary for better library compatibility
+    mappings loom.officialMojangMappings()  // Use official mappings for better stability
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     
     // Optional: Add Fabric API if you need it for your library
@@ -68,17 +78,13 @@ jar {
         rename { "${it}_${project.archives_base_name}" }
     }
     
-    // Ensure proper manifest for library usage
-    manifest {
-        attributes(
-            'Fabric-Loom-Remap': 'true'
-        )
-    }
+    // Keep classes unobfuscated for library usage
+    archiveClassifier = 'dev'
 }
 
 // Configure remapping for library distribution
 remapJar {
-    addNestedDependencies = false
+    enabled = false  // Disable remapping to keep unobfuscated
 }
 
 publishing {
@@ -90,9 +96,9 @@ publishing {
             
             from components.java
             
-            // Publish the remapped jars for proper compatibility
-            artifact remapJar
-            artifact remapSourcesJar
+            // Publish the unobfuscated jar for development use
+            artifact jar
+            artifact sourcesJar
         }
     }
     
