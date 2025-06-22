@@ -5,7 +5,6 @@
 3) Under *Dependencies* add `modImplementation "com.github.letsmanuel:easynet:v1.0.5"`. This adds the EasyNet Library to your mod.
 
 ## EasyNet Usage Documentation:
-
 **Simplified Networking for Minecraft Fabric**
 
 EasyNet is a lightweight networking library that simplifies packet communication between Minecraft clients and servers using Fabric's networking API. It provides an intuitive interface for sending and receiving custom packets with NBT data.
@@ -14,12 +13,12 @@ EasyNet is a lightweight networking library that simplifies packet communication
 
 ## Features
 
-* Simple packet registration and handling
-* Automatic payload serialization/deserialization
-* Support for both client-to-server (C2S) and server-to-client (S2C) packets
-* NBT-based data transfer
-* Player instance management
-* Error handling and debugging support
+- Simple packet registration and handling  
+- Automatic payload serialization/deserialization  
+- Support for both client-to-server (C2S) and server-to-client (S2C) packets  
+- NBT-based data transfer  
+- Player instance management  
+- Error handling and debugging support  
 
 ---
 
@@ -38,7 +37,7 @@ EasyNet.registerServerPacketHandler("my_packet", (player, data) -> {
 NbtCompound data = new NbtCompound();
 data.putString("message", "Hello Client!");
 EasyNet.sendPacketToClient(player, "response_packet", data);
-```
+````
 
 ### 2. Client Side Setup
 
@@ -262,7 +261,3 @@ EasyNet.registerClientPacketHandler("open_gui", (data) -> {
 *Author:* letsmanuel
 *Version:* 1.0
 *Since:* Minecraft 1.21+ / Fabric
-
----
-
-If you'd like, I can help you turn this into a full GitHub markdown file ready for your repo!
