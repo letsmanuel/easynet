@@ -326,14 +326,25 @@ public class EasyNet {
                 BiConsumer<Object, String> registeredHandler = SERVER_HANDLERS.get(packetNameFromPayload);
                 if (registeredHandler != null) {
                     // Execute on the server thread to ensure thread safety
-                    context.server().execute(() -> {
+                    ServerPlayerEntity serverPlayer = castToServerPlayer(player);
+                    if (serverPlayer != null) {
+                        serverPlayer.getServer().execute(() -> {
+                            try {
+                                registeredHandler.accept(player, data);
+                            } catch (Exception handlerException) {
+                                System.err.println("Error in packet handler for '" + packetNameFromPayload + "': " + handlerException.getMessage());
+                                handlerException.printStackTrace();
+                            }
+                        });
+                    } else {
+                        // Fallback: execute directly if we can't get server reference
                         try {
                             registeredHandler.accept(player, data);
                         } catch (Exception handlerException) {
                             System.err.println("Error in packet handler for '" + packetNameFromPayload + "': " + handlerException.getMessage());
                             handlerException.printStackTrace();
                         }
-                    });
+                    }
                 }
             } catch (Exception e) {
                 System.err.println("Error handling server packet '" + packetName + "': " + e.getMessage());
