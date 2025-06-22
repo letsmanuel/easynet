@@ -263,10 +263,27 @@ public class EasyNet {
                 String data = easyPayload.getData();
                 String packetNameFromPayload = easyPayload.getPacketName();
 
-                // Call the registered handler with string data
+                // Get the actual player entity from the context
+                ServerPlayerEntity player = context.player();
+
+                // Ensure we have a valid player entity
+                if (player == null) {
+                    System.err.println("Warning: No player entity found for packet '" + packetNameFromPayload + "'");
+                    return;
+                }
+
+                // Call the registered handler with the actual player entity and string data
                 BiConsumer<ServerPlayerEntity, String> registeredHandler = SERVER_HANDLERS.get(packetNameFromPayload);
                 if (registeredHandler != null) {
-                    registeredHandler.accept(context.player(), data);
+                    // Execute on the server thread to ensure thread safety
+                    context.server().execute(() -> {
+                        try {
+                            registeredHandler.accept(player, data);
+                        } catch (Exception handlerException) {
+                            System.err.println("Error in packet handler for '" + packetNameFromPayload + "': " + handlerException.getMessage());
+                            handlerException.printStackTrace();
+                        }
+                    });
                 }
             } catch (Exception e) {
                 System.err.println("Error handling server packet '" + packetName + "': " + e.getMessage());
@@ -320,7 +337,15 @@ public class EasyNet {
                 // Call the registered handler with string data
                 Consumer<String> registeredHandler = CLIENT_HANDLERS.get(packetNameFromPayload);
                 if (registeredHandler != null) {
-                    registeredHandler.accept(data);
+                    // Execute on the client thread to ensure thread safety
+                    context.client().execute(() -> {
+                        try {
+                            registeredHandler.accept(data);
+                        } catch (Exception handlerException) {
+                            System.err.println("Error in client packet handler for '" + packetNameFromPayload + "': " + handlerException.getMessage());
+                            handlerException.printStackTrace();
+                        }
+                    });
                 }
             } catch (Exception e) {
                 System.err.println("Error handling client packet '" + packetName + "': " + e.getMessage());
@@ -330,8 +355,58 @@ public class EasyNet {
     }
 
     // ════════════════════════════════════════════════════════════════════════════════
-    // UTILITY METHODS
+    // UTILITY METHODS FOR PLAYER ACCESS
     // ════════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Get player name from ServerPlayerEntity
+     * @param player The player entity
+     * @return Player's display name as string
+     */
+    public static String getPlayerName(ServerPlayerEntity player) {
+        if (player == null) return "Unknown Player";
+        return player.getName().getString();
+    }
+
+    /**
+     * Get player UUID from ServerPlayerEntity
+     * @param player The player entity
+     * @return Player's UUID as string
+     */
+    public static String getPlayerUuid(ServerPlayerEntity player) {
+        if (player == null) return "";
+        return player.getUuidAsString();
+    }
+
+    /**
+     * Check if player is valid and online
+     * @param player The player entity
+     * @return true if player is valid and connected
+     */
+    public static boolean isPlayerValid(ServerPlayerEntity player) {
+        return player != null && !player.isDisconnected();
+    }
+
+    /**
+     * Get player's current world name
+     * @param player The player entity
+     * @return World name as string
+     */
+    public static String getPlayerWorld(ServerPlayerEntity player) {
+        if (player == null || player.getServerWorld() == null) return "unknown";
+        return player.getServerWorld().getRegistryKey().getValue().toString();
+    }
+
+    /**
+     * Get player's position as JSON string
+     * @param player The player entity
+     * @return JSON string with x, y, z coordinates
+     */
+    public static String getPlayerPosition(ServerPlayerEntity player) {
+        if (player == null) return "{\"x\":0,\"y\":0,\"z\":0}";
+        return String.format("{\"x\":%.2f,\"y\":%.2f,\"z\":%.2f}",
+                player.getX(), player.getY(), player.getZ());
+    }
 
     /**
      * Register a player instance with a mod identifier
