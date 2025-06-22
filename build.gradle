@@ -48,8 +48,8 @@ dependencies {
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     
-    // Fabric API is required for networking
-    modImplementation "net.fabricmc.fabric-api:fabric-api:0.101.1+1.21"
+    // Updated Fabric API version for MC 1.21
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.102.0+1.21"
 }
 
 processResources {
