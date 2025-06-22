@@ -294,7 +294,7 @@ public class EasyNet {
      * @param packetName Unique identifier for the packet type
      * @param handler Callback function (ServerPlayerEntity player, String data)
      */
-    public static void registerServerPacketHandler(String packetName, BiConsumer<Object, String> handler) {
+    public static void registerServerPacketHandler(String packetName, BiConsumer<ServerPlayerEntity, String> handler) {
         SERVER_HANDLERS.put(packetName, handler);
         CustomPayload.Id<EasyNetPayload> packetId = getOrCreatePacketId(packetName);
         registerPayloadTypeSafe(packetId, false);
