@@ -1,18 +1,19 @@
 buildscript {
     repositories {
-        maven {
-            url = 'https://maven.fabricmc.net/' // Loom repo
-        }
+        maven { url = 'https://maven.fabricmc.net/' }
         mavenCentral()
-        gradlePluginPortal()
     }
     dependencies {
         classpath 'net.fabricmc:fabric-loom:1.9.2'
     }
 }
 
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
 apply plugin: 'fabric-loom'
-apply plugin: 'maven-publish'
 
 version = project.mod_version
 group = project.maven_group
@@ -24,93 +25,95 @@ base {
 repositories {
     mavenCentral()
     maven { url = "https://maven.fabricmc.net/" }
-    maven { url = "https://jitpack.io" }
 }
 
-loom {
-    // Configure for library building
-    runs {
-        client {
-            property "fabric.development", "true"
-        }
-    }
-    
-    // Add this to help with duplicate key warnings
-    mods {
-        "easynet" {
-            sourceSet sourceSets.main
-        }
-    }
+configurations {
+    library
+    implementation.extendsFrom library
 }
 
 dependencies {
+    // Minecraft dependencies for compilation only (not bundled)
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings loom.officialMojangMappings()  // Use official mappings for better stability
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    mappings loom.officialMojangMappings()
     
-    // Optional: Add Fabric API if you need it for your library
-    // modImplementation "net.fabricmc:fabric-api:${project.fabric_version}"
+    // Fabric API dependencies (compileOnly - not bundled with your library)
+    modCompileOnly "net.fabricmc:fabric-loader:${project.loader_version}"
+    modCompileOnly "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    
+    // Specifically include networking API for compilation
+    modCompileOnly "net.fabricmc:fabric-networking-api-v1:${project.fabric_version}"
+    
+    // Your library will require these at runtime but not bundle them
+    compileOnly "net.fabricmc:fabric-loader:${project.loader_version}"
+    compileOnly "net.fabricmc:fabric-networking-api-v1:${project.fabric_version}"
 }
 
 processResources {
     inputs.property "version", project.version
-
     filesMatching("fabric.mod.json") {
-        expand "version": inputs.properties.version
+        expand "version": project.version
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+    it.options.release = 17
 }
 
 java {
     withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    withJavadocJar()
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 jar {
     from("LICENSE") {
         rename { "${it}_${project.archives_base_name}" }
     }
-    
-    // Keep classes unobfuscated for library usage
+    // Mark as library jar
     archiveClassifier = 'dev'
 }
 
-// Disable the default remapping tasks to prevent obfuscation
+// Disable remapping since this is a library
 remapJar.enabled = false
 remapSourcesJar.enabled = false
 
-
-
 publishing {
     publications {
-        create("mavenJava", MavenPublication) {
-            groupId = project.maven_group
+        mavenJava(MavenPublication) {
             artifactId = project.archives_base_name
-            version = project.mod_version
-            
             from components.java
-            
-            // Publish the unobfuscated jar for development use
-            artifact jar
-            artifact sourcesJar
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name = 'EasyNet'
+                description = 'A simplified networking library for Fabric mods'
+                licenses {
+                    license {
+                        name = 'Your License'
+                        url = 'https://your.license.url'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'yourid'
+                        name = 'Your Name'
+                        email = 'your@email.com'
+                    }
+                }
+            }
         }
     }
-    
-    // Optional: Configure repositories for publishing
     repositories {
-        // Add your publishing repositories here
-        // Example for GitHub Packages:
-        // maven {
-        //     name = "GitHubPackages"
-        //     url = "https://maven.pkg.github.com/yourusername/yourrepo"
-        //     credentials {
-        //         username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
-        //         password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
-        //     }
-        // }
+        // Configure your publishing repository here
+        // Example for Maven Local:
+        // mavenLocal()
     }
 }
