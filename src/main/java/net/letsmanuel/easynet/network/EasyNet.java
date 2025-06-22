@@ -20,10 +20,9 @@ import java.util.function.Consumer;
 
 public class EasyNet {
     private static final Map<String, CustomPayload.Id<EasyNetPayload>> PACKET_IDS = new ConcurrentHashMap<>();
-    private static final Map<String, BiConsumer<ServerPlayerEntity, String>> SERVER_HANDLERS = new ConcurrentHashMap<>();
-    private static final Map<String, BiConsumer<Object, String>> LEGACY_SERVER_HANDLERS = new ConcurrentHashMap<>();
+    private static final Map<String, BiConsumer<Object, String>> SERVER_HANDLERS = new ConcurrentHashMap<>();
     private static final Map<String, Consumer<String>> CLIENT_HANDLERS = new ConcurrentHashMap<>();
-    private static final Map<String, ServerPlayerEntity> REGISTERED_PLAYERS = new ConcurrentHashMap<>();
+    private static final Map<String, Object> REGISTERED_PLAYERS = new ConcurrentHashMap<>();
     private static final Set<CustomPayload.Id<EasyNetPayload>> REGISTERED_S2C = ConcurrentHashMap.newKeySet();
     private static final Set<CustomPayload.Id<EasyNetPayload>> REGISTERED_C2S = ConcurrentHashMap.newKeySet();
 
@@ -69,31 +68,11 @@ public class EasyNet {
     }
 
     // ════════════════════════════════════════════════════════════════════════════════
-    // OBFUSCATION-SAFE UTILITIES
+    // OBFUSCATION-SAFE UTILITIES - NO CASTING APPROACH
     // ════════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Safely cast any object to ServerPlayerEntity
-     * This works even in obfuscated environments because the type hierarchy is preserved
-     */
-    private static ServerPlayerEntity safePlayerCast(Object playerObj) {
-        if (playerObj == null) {
-            return null;
-        }
-        
-        try {
-            // Direct cast - this works even with obfuscated class names
-            // because the JVM type system is preserved
-            return (ServerPlayerEntity) playerObj;
-        } catch (ClassCastException e) {
-            logError("Invalid player object type: " + playerObj.getClass().getSimpleName() + 
-                    " - Expected ServerPlayerEntity or its obfuscated equivalent");
-            return null;
-        }
-    }
-
-    /**
-     * Safe error logging that won't cause issues in obfuscated environments
+     * Safe error logging
      */
     private static void logError(String message) {
         System.err.println("[EasyNet] " + message);
@@ -106,20 +85,172 @@ public class EasyNet {
         System.out.println("[EasyNet] " + message);
     }
 
+    /**
+     * Safely get player name using reflection to avoid casting issues
+     */
+    private static String getPlayerNameSafe(Object playerObj) {
+        if (playerObj == null) return "Unknown Player";
+        
+        try {
+            // Try multiple methods to get player name
+            Class<?> clazz = playerObj.getClass();
+            
+            // Try getName() method
+            try {
+                Object nameObj = clazz.getMethod("getName").invoke(playerObj);
+                if (nameObj != null) {
+                    Object stringObj = nameObj.getClass().getMethod("getString").invoke(nameObj);
+                    if (stringObj instanceof String) {
+                        return (String) stringObj;
+                    }
+                }
+            } catch (Exception e) {
+                // Try alternative methods
+            }
+            
+            // Try getDisplayName() method
+            try {
+                Object displayNameObj = clazz.getMethod("getDisplayName").invoke(playerObj);
+                if (displayNameObj != null) {
+                    Object stringObj = displayNameObj.getClass().getMethod("getString").invoke(displayNameObj);
+                    if (stringObj instanceof String) {
+                        return (String) stringObj;
+                    }
+                }
+            } catch (Exception e) {
+                // Continue to fallback
+            }
+            
+            return "Player_" + System.identityHashCode(playerObj);
+        } catch (Exception e) {
+            return "Unknown Player";
+        }
+    }
+
+    /**
+     * Safely get player UUID using reflection
+     */
+    private static String getPlayerUuidSafe(Object playerObj) {
+        if (playerObj == null) return "";
+        
+        try {
+            Class<?> clazz = playerObj.getClass();
+            
+            // Try getUuidAsString() method
+            try {
+                Object uuidObj = clazz.getMethod("getUuidAsString").invoke(playerObj);
+                if (uuidObj instanceof String) {
+                    return (String) uuidObj;
+                }
+            } catch (Exception e) {
+                // Try getUuid() method
+                try {
+                    Object uuidObj = clazz.getMethod("getUuid").invoke(playerObj);
+                    if (uuidObj != null) {
+                        return uuidObj.toString();
+                    }
+                } catch (Exception e2) {
+                    // Continue to fallback
+                }
+            }
+            
+            return "uuid_" + System.identityHashCode(playerObj);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * Safely check if player is disconnected using reflection
+     */
+    private static boolean isPlayerDisconnectedSafe(Object playerObj) {
+        if (playerObj == null) return true;
+        
+        try {
+            Class<?> clazz = playerObj.getClass();
+            
+            // Try isDisconnected() method
+            try {
+                Object result = clazz.getMethod("isDisconnected").invoke(playerObj);
+                if (result instanceof Boolean) {
+                    return (Boolean) result;
+                }
+            } catch (Exception e) {
+                // If we can't check, assume connected
+                return false;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    /**
+     * Safely get server from player using reflection
+     */
+    private static Object getServerFromPlayerSafe(Object playerObj) {
+        if (playerObj == null) return null;
+        
+        try {
+            Class<?> clazz = playerObj.getClass();
+            
+            // Try getServer() method
+            try {
+                return clazz.getMethod("getServer").invoke(playerObj);
+            } catch (Exception e) {
+                // Try server field
+                try {
+                    return clazz.getField("server").get(playerObj);
+                } catch (Exception e2) {
+                    return null;
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Safely execute on server thread using reflection
+     */
+    private static void executeOnServerThreadSafe(Object playerObj, Runnable task) {
+        try {
+            Object server = getServerFromPlayerSafe(playerObj);
+            if (server != null) {
+                Class<?> serverClass = server.getClass();
+                try {
+                    serverClass.getMethod("execute", Runnable.class).invoke(server, task);
+                    return;
+                } catch (Exception e) {
+                    // Fallback to direct execution
+                }
+            }
+        } catch (Exception e) {
+            // Continue to fallback
+        }
+        
+        // Fallback: execute directly
+        try {
+            task.run();
+        } catch (Exception e) {
+            logError("Failed to execute task: " + e.getMessage());
+        }
+    }
+
     // ════════════════════════════════════════════════════════════════════════════════
     // SERVER SIDE METHODS
     // ════════════════════════════════════════════════════════════════════════════════
 
     /**
      * Send a packet from server to a specific client
-     * @param player Target player (ServerPlayerEntity or any object that can be cast to it)
+     * @param player Target player (any player object)
      * @param packetName Unique identifier for the packet type
      * @param content String data to send (JSON recommended)
      */
     public static void sendPacketToClient(Object player, String packetName, String content) {
-        ServerPlayerEntity serverPlayer = safePlayerCast(player);
-        if (serverPlayer == null) {
-            logError("Cannot send packet '" + packetName + "' - invalid player object");
+        if (player == null) {
+            logError("Cannot send packet '" + packetName + "' - player is null");
             return;
         }
 
@@ -128,28 +259,36 @@ public class EasyNet {
             registerPayloadTypeSafe(packetId, true);
 
             EasyNetPayload payload = new EasyNetPayload(packetName, content);
-            ServerPlayNetworking.send(serverPlayer, payload);
+            
+            // Use reflection to call ServerPlayNetworking.send
+            Class<?> networkingClass = ServerPlayNetworking.class;
+            networkingClass.getMethod("send", Object.class, CustomPayload.class).invoke(null, player, payload);
+            
         } catch (Exception e) {
             logError("Failed to send packet '" + packetName + "' to client: " + e.getMessage());
         }
     }
 
     /**
-     * Send a packet to all connected players
+     * Send a packet to all connected players using server reference
+     * @param server The minecraft server instance
      * @param packetName Unique identifier for the packet type
      * @param content String data to send
      */
-    public static void broadcastPacketToAllClients(String packetName, String content) {
+    public static void broadcastPacketToAllClients(Object server, String packetName, String content) {
         try {
             CustomPayload.Id<EasyNetPayload> packetId = getOrCreatePacketId(packetName);
             registerPayloadTypeSafe(packetId, true);
 
             EasyNetPayload payload = new EasyNetPayload(packetName, content);
             
-            // Send to all players manually since sendToAll might not be available in all versions
-            for (ServerPlayerEntity player : REGISTERED_PLAYERS.values()) {
-                if (player != null && !player.isDisconnected()) {
-                    ServerPlayNetworking.send(player, payload);
+            // Use PlayerLookup.all() with reflection
+            Class<?> playerLookupClass = PlayerLookup.class;
+            Object playersCollection = playerLookupClass.getMethod("all", Object.class).invoke(null, server);
+            
+            if (playersCollection instanceof Iterable) {
+                for (Object player : (Iterable<?>) playersCollection) {
+                    sendPacketToClient(player, packetName, content);
                 }
             }
         } catch (Exception e) {
@@ -158,33 +297,31 @@ public class EasyNet {
     }
 
     /**
-     * Send a packet to all connected players on a specific server
-     * @param server The minecraft server instance
+     * Send a packet to all registered players
      * @param packetName Unique identifier for the packet type
      * @param content String data to send
      */
-    public static void broadcastPacketToAllClients(MinecraftServer server, String packetName, String content) {
+    public static void broadcastPacketToRegisteredClients(String packetName, String content) {
         try {
             CustomPayload.Id<EasyNetPayload> packetId = getOrCreatePacketId(packetName);
             registerPayloadTypeSafe(packetId, true);
 
-            EasyNetPayload payload = new EasyNetPayload(packetName, content);
-            
-            // Send to all players on the server
-            for (ServerPlayerEntity player : PlayerLookup.all(server)) {
-                ServerPlayNetworking.send(player, payload);
+            for (Object player : REGISTERED_PLAYERS.values()) {
+                if (player != null && !isPlayerDisconnectedSafe(player)) {
+                    sendPacketToClient(player, packetName, content);
+                }
             }
         } catch (Exception e) {
-            logError("Failed to broadcast packet '" + packetName + "': " + e.getMessage());
+            logError("Failed to broadcast packet to registered clients '" + packetName + "': " + e.getMessage());
         }
     }
 
     /**
      * Register a handler for incoming client packets
      * @param packetName Unique identifier for the packet type
-     * @param handler Callback function (ServerPlayerEntity player, String data)
+     * @param handler Callback function (Object player, String data)
      */
-    public static void registerServerPacketHandler(String packetName, BiConsumer<ServerPlayerEntity, String> handler) {
+    public static void registerServerPacketHandler(String packetName, BiConsumer<Object, String> handler) {
         SERVER_HANDLERS.put(packetName, handler);
         CustomPayload.Id<EasyNetPayload> packetId = getOrCreatePacketId(packetName);
         registerPayloadTypeSafe(packetId, false);
@@ -195,30 +332,23 @@ public class EasyNet {
                 String data = easyPayload.getData();
                 String receivedPacketName = easyPayload.getPacketName();
 
-                // Get player from context
-                ServerPlayerEntity player = safePlayerCast(context.player());
+                // Get player from context - this is safe because it's provided by Fabric
+                Object player = context.player();
                 if (player == null) {
-                    logError("No valid player found for packet '" + receivedPacketName + "'");
+                    logError("No player found for packet '" + receivedPacketName + "'");
                     return;
                 }
 
-                // Check for new-style handler first
-                BiConsumer<ServerPlayerEntity, String> registeredHandler = SERVER_HANDLERS.get(receivedPacketName);
-                BiConsumer<Object, String> legacyHandler = LEGACY_SERVER_HANDLERS.get(receivedPacketName);
-                
-                if (registeredHandler == null && legacyHandler == null) {
+                BiConsumer<Object, String> registeredHandler = SERVER_HANDLERS.get(receivedPacketName);
+                if (registeredHandler == null) {
                     logError("No handler registered for packet '" + receivedPacketName + "'");
                     return;
                 }
 
-                // Execute on server thread for thread safety
-                executeOnServerThread(player, () -> {
+                // Execute on server thread safely
+                executeOnServerThreadSafe(player, () -> {
                     try {
-                        if (registeredHandler != null) {
-                            registeredHandler.accept(player, data);
-                        } else {
-                            legacyHandler.accept(player, data);
-                        }
+                        registeredHandler.accept(player, data);
                     } catch (Exception e) {
                         logError("Error in server packet handler '" + receivedPacketName + "': " + e.getMessage());
                         e.printStackTrace();
@@ -275,15 +405,24 @@ public class EasyNet {
                     return;
                 }
 
-                // Execute on client thread for thread safety
-                executeOnClientThread(context, () -> {
+                // Execute on client thread safely
+                try {
+                    context.client().execute(() -> {
+                        try {
+                            registeredHandler.accept(data);
+                        } catch (Exception e) {
+                            logError("Error in client packet handler '" + receivedPacketName + "': " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    });
+                } catch (Exception e) {
+                    // Fallback: execute directly
                     try {
                         registeredHandler.accept(data);
-                    } catch (Exception e) {
-                        logError("Error in client packet handler '" + receivedPacketName + "': " + e.getMessage());
-                        e.printStackTrace();
+                    } catch (Exception e2) {
+                        logError("Error in client packet handler '" + receivedPacketName + "': " + e2.getMessage());
                     }
-                });
+                }
 
             } catch (Exception e) {
                 logError("Error processing client packet '" + packetName + "': " + e.getMessage());
@@ -293,70 +432,120 @@ public class EasyNet {
     }
 
     // ════════════════════════════════════════════════════════════════════════════════
-    // PLAYER UTILITY METHODS
+    // PLAYER UTILITY METHODS - ALL REFLECTION BASED
     // ════════════════════════════════════════════════════════════════════════════════
 
     /**
      * Get player name safely
      */
     public static String getPlayerName(Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        return player != null ? player.getName().getString() : "Unknown Player";
+        return getPlayerNameSafe(playerObj);
     }
 
     /**
      * Get player UUID safely
      */
     public static String getPlayerUuid(Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        return player != null ? player.getUuidAsString() : "";
+        return getPlayerUuidSafe(playerObj);
     }
 
     /**
      * Check if player is valid and online
      */
     public static boolean isPlayerValid(Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        return player != null && !player.isDisconnected();
+        return playerObj != null && !isPlayerDisconnectedSafe(playerObj);
     }
 
     /**
-     * Get player's current world name
+     * Get player's current world name using reflection
      */
     public static String getPlayerWorld(Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        if (player == null || player.getServerWorld() == null) {
+        if (playerObj == null) return "unknown";
+        
+        try {
+            Class<?> clazz = playerObj.getClass();
+            
+            // Try getServerWorld() method
+            try {
+                Object worldObj = clazz.getMethod("getServerWorld").invoke(playerObj);
+                if (worldObj != null) {
+                    Object registryKeyObj = worldObj.getClass().getMethod("getRegistryKey").invoke(worldObj);
+                    if (registryKeyObj != null) {
+                        Object valueObj = registryKeyObj.getClass().getMethod("getValue").invoke(registryKeyObj);
+                        if (valueObj != null) {
+                            return valueObj.toString();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Try getWorld() method
+                try {
+                    Object worldObj = clazz.getMethod("getWorld").invoke(playerObj);
+                    if (worldObj != null) {
+                        return worldObj.getClass().getSimpleName();
+                    }
+                } catch (Exception e2) {
+                    // Continue to fallback
+                }
+            }
+            
+            return "unknown";
+        } catch (Exception e) {
             return "unknown";
         }
-        return player.getServerWorld().getRegistryKey().getValue().toString();
     }
 
     /**
-     * Get player's position as JSON string
+     * Get player's position as JSON string using reflection
      */
     public static String getPlayerPosition(Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        if (player == null) {
+        if (playerObj == null) return "{\"x\":0,\"y\":0,\"z\":0}";
+        
+        try {
+            Class<?> clazz = playerObj.getClass();
+            
+            // Try getX(), getY(), getZ() methods
+            try {
+                Object xObj = clazz.getMethod("getX").invoke(playerObj);
+                Object yObj = clazz.getMethod("getY").invoke(playerObj);
+                Object zObj = clazz.getMethod("getZ").invoke(playerObj);
+                
+                double x = xObj instanceof Number ? ((Number) xObj).doubleValue() : 0.0;
+                double y = yObj instanceof Number ? ((Number) yObj).doubleValue() : 0.0;
+                double z = zObj instanceof Number ? ((Number) zObj).doubleValue() : 0.0;
+                
+                return String.format("{\"x\":%.2f,\"y\":%.2f,\"z\":%.2f}", x, y, z);
+            } catch (Exception e) {
+                return "{\"x\":0,\"y\":0,\"z\":0}";
+            }
+        } catch (Exception e) {
             return "{\"x\":0,\"y\":0,\"z\":0}";
         }
-        return String.format("{\"x\":%.2f,\"y\":%.2f,\"z\":%.2f}", 
-                           player.getX(), player.getY(), player.getZ());
     }
 
     /**
-     * Get player's health
+     * Get player's health using reflection
      */
     public static float getPlayerHealth(Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        return player != null ? player.getHealth() : 0.0f;
-    }
-
-    /**
-     * Get player's food level
-     */
-    public static int getPlayerFoodLevel(Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        return player != null ? player.getHungerManager().getFoodLevel() : 0;
+        if (playerObj == null) return 0.0f;
+        
+        try {
+            Class<?> clazz = playerObj.getClass();
+            
+            // Try getHealth() method
+            try {
+                Object healthObj = clazz.getMethod("getHealth").invoke(playerObj);
+                if (healthObj instanceof Number) {
+                    return ((Number) healthObj).floatValue();
+                }
+            } catch (Exception e) {
+                // Continue to fallback
+            }
+            
+            return 0.0f;
+        } catch (Exception e) {
+            return 0.0f;
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════════════
@@ -367,16 +556,15 @@ public class EasyNet {
      * Register a player instance with a unique key
      */
     public static void registerPlayer(String key, Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        if (player != null) {
-            REGISTERED_PLAYERS.put(key, player);
+        if (playerObj != null) {
+            REGISTERED_PLAYERS.put(key, playerObj);
         }
     }
 
     /**
      * Get a registered player by key
      */
-    public static ServerPlayerEntity getRegisteredPlayer(String key) {
+    public static Object getRegisteredPlayer(String key) {
         return REGISTERED_PLAYERS.get(key);
     }
 
@@ -391,17 +579,17 @@ public class EasyNet {
      * Register player by mod ID and UUID
      */
     public static void registerPlayerByMod(String modId, Object playerObj) {
-        ServerPlayerEntity player = safePlayerCast(playerObj);
-        if (player != null) {
-            String key = modId + ":" + player.getUuidAsString();
-            REGISTERED_PLAYERS.put(key, player);
+        if (playerObj != null) {
+            String uuid = getPlayerUuidSafe(playerObj);
+            String key = modId + ":" + uuid;
+            REGISTERED_PLAYERS.put(key, playerObj);
         }
     }
 
     /**
      * Get player by mod ID and UUID
      */
-    public static ServerPlayerEntity getPlayerByMod(String modId, String playerUuid) {
+    public static Object getPlayerByMod(String modId, String playerUuid) {
         String key = modId + ":" + playerUuid;
         return REGISTERED_PLAYERS.get(key);
     }
@@ -479,62 +667,9 @@ public class EasyNet {
         }
     }
 
-    /**
-     * Execute task on server thread safely
-     */
-    private static void executeOnServerThread(ServerPlayerEntity player, Runnable task) {
-        try {
-            if (player.getServer() != null) {
-                player.getServer().execute(task);
-            } else {
-                // Fallback: execute directly if no server reference
-                task.run();
-            }
-        } catch (Exception e) {
-            logError("Failed to execute task on server thread: " + e.getMessage());
-            // Fallback: execute directly
-            try {
-                task.run();
-            } catch (Exception fallbackException) {
-                logError("Fallback execution also failed: " + fallbackException.getMessage());
-            }
-        }
-    }
-
-    /**
-     * Execute task on client thread safely
-     */
-    private static void executeOnClientThread(ClientPlayNetworking.Context context, Runnable task) {
-        try {
-            context.client().execute(task);
-        } catch (Exception e) {
-            logError("Failed to execute task on client thread: " + e.getMessage());
-            // Fallback: execute directly
-            try {
-                task.run();
-            } catch (Exception fallbackException) {
-                logError("Fallback execution also failed: " + fallbackException.getMessage());
-            }
-        }
-    }
-
     // ════════════════════════════════════════════════════════════════════════════════
     // BACKWARDS COMPATIBILITY METHODS
     // ════════════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Register a handler for incoming client packets (Legacy version with Object parameter)
-     * @param packetName Unique identifier for the packet type
-     * @param handler Callback function (Object player, String data) - use getPlayerName(), etc. for player info
-     */
-    public static void registerLegacyServerPacketHandler(String packetName, BiConsumer<Object, String> handler) {
-        LEGACY_SERVER_HANDLERS.put(packetName, handler);
-        CustomPayload.Id<EasyNetPayload> packetId = getOrCreatePacketId(packetName);
-        registerPayloadTypeSafe(packetId, false);
-
-        // The actual receiver is already registered in registerServerPacketHandler
-        // This method just adds the legacy handler to the map
-    }
 
     /**
      * @deprecated Use sendPacketToServer instead
@@ -545,10 +680,9 @@ public class EasyNet {
     }
 
     /**
-     * @deprecated Use safePlayerCast internally - not needed for external use anymore
+     * Broadcast to all registered clients (legacy method name)
      */
-    @Deprecated
-    public static ServerPlayerEntity castToServerPlayer(Object playerObj) {
-        return safePlayerCast(playerObj);
+    public static void broadcastPacketToAllClients(String packetName, String content) {
+        broadcastPacketToRegisteredClients(packetName, content);
     }
 }
