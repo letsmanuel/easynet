@@ -1,153 +1,14 @@
-/**
- * ╔═══════════════════════════════════════════════════════════════════════════════╗
- * ║                                   EASYNET                                     ║
- * ║                        Simplified Networking for Minecraft Fabric            ║
- * ╚═══════════════════════════════════════════════════════════════════════════════╝
- *
- * EasyNet is a lightweight networking library that simplifies packet communication
- * between Minecraft clients and servers using Fabric's networking API. It provides
- * an intuitive interface for sending and receiving custom packets with string data.
- *
- * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │                                 FEATURES                                    │
- * └─────────────────────────────────────────────────────────────────────────────┘
- *
- * • Simple packet registration and handling
- * • Automatic payload serialization/deserialization
- * • Support for both client-to-server (C2S) and server-to-client (S2C) packets
- * • String-based data transfer (JSON recommended)
- * • Player instance management with obfuscation-safe casting
- * • Error handling and debugging support
- *
- * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │                              QUICK START                                    │
- * └─────────────────────────────────────────────────────────────────────────────┘
- *
- * 1. SERVER SIDE SETUP:
- *
- *    // Register a packet handler
- *    EasyNet.registerServerPacketHandler("my_packet", (playerObj, data) -> {
- *        ServerPlayerEntity player = EasyNet.castToServerPlayer(playerObj);
- *        System.out.println("Received packet from " + player.getName().getString());
- *        System.out.println("Data: " + data);
- *    });
- *
- *    // Send a packet to a specific client
- *    String jsonData = "{\"message\":\"Hello Client!\",\"type\":\"greeting\"}";
- *    EasyNet.sendPacketToClient(player, "response_packet", jsonData);
- *
- * 2. CLIENT SIDE SETUP:
- *
- *    // Register a packet handler
- *    EasyNet.registerClientPacketHandler("response_packet", (data) -> {
- *        System.out.println("Server says: " + data);
- *    });
- *
- *    // Send a packet to the server
- *    String jsonData = "{\"action\":\"player_action\",\"value\":\"jump\"}";
- *    EasyNet.sendPacket("my_packet", jsonData);
- *
- * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │                               API REFERENCE                                 │
- * └─────────────────────────────────────────────────────────────────────────────┘
- *
- * ════════════════════════════════════════════════════════════════════════════════
- * SERVER SIDE METHODS
- * ════════════════════════════════════════════════════════════════════════════════
- *
- * sendPacketToClient(Object player, String packetName, String content)
- * ┌─ Description: Send a packet from server to a specific client
- * ├─ Parameters:
- * │  • player: Target player to send the packet to (ServerPlayerEntity)
- * │  • packetName: Unique identifier for the packet type
- * │  • content: String data to send (JSON recommended)
- * └─ Returns: void
- *
- * registerServerPacketHandler(String packetName, BiConsumer<Object, String> handler)
- * ┌─ Description: Register a handler for incoming client packets
- * ├─ Parameters:
- * │  • packetName: Unique identifier for the packet type
- * │  • handler: Callback function that processes the packet data (use castToServerPlayer)
- * └─ Returns: void
- *
- * ════════════════════════════════════════════════════════════════════════════════
- * CLIENT SIDE METHODS
- * ════════════════════════════════════════════════════════════════════════════════
- *
- * sendPacket(String packetName, String content)
- * ┌─ Description: Send a packet from client to server
- * ├─ Parameters:
- * │  • packetName: Unique identifier for the packet type
- * │  • content: String data to send (JSON recommended)
- * └─ Returns: void
- *
- * registerClientPacketHandler(String packetName, Consumer<String> handler)
- * ┌─ Description: Register a handler for incoming server packets
- * ├─ Parameters:
- * │  • packetName: Unique identifier for the packet type
- * │  • handler: Callback function that processes the packet data
- * └─ Returns: void
- *
- * ════════════════════════════════════════════════════════════════════════════════
- * UTILITY METHODS
- * ════════════════════════════════════════════════════════════════════════════════
- *
- * castToServerPlayer(Object playerObj)
- * ┌─ Description: Safely cast Object to ServerPlayerEntity (handles obfuscation)
- * ├─ Parameters:
- * │  • playerObj: Player object from packet handler
- * └─ Returns: ServerPlayerEntity or null if cast fails
- *
- * registerPlayerInstance(String modId, Object player)
- * ┌─ Description: Register a player instance with a mod identifier
- * ├─ Parameters:
- * │  • modId: Your mod's identifier
- * │  • player: Player instance to register (ServerPlayerEntity)
- * └─ Returns: void
- *
- * getRegisteredPlayer(String modId, String playerUuid)
- * ┌─ Description: Retrieve a registered player by mod ID and UUID
- * ├─ Parameters:
- * │  • modId: Your mod's identifier
- * │  • playerUuid: Player's UUID as string
- * └─ Returns: Object (cast with castToServerPlayer) or null if not found
- *
- * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │                            USAGE EXAMPLES                                   │
- * └─────────────────────────────────────────────────────────────────────────────┘
- *
- * ════════════════════════════════════════════════════════════════════════════════
- * EXAMPLE 1: SIMPLE CHAT MESSAGE
- * ════════════════════════════════════════════════════════════════════════════════
- *
- * // Server side - register handler
- * EasyNet.registerServerPacketHandler("chat_message", (playerObj, data) -> {
- *     ServerPlayerEntity player = EasyNet.castToServerPlayer(playerObj);
- *     if (player != null) {
- *         // Parse JSON string data
- *         // String format: {"message":"Hello everyone!","timestamp":"12345"}
- *         System.out.println("Chat data: " + data);
- *     }
- * });
- *
- * // Client side - send message
- * String chatData = "{\"message\":\"Hello everyone!\",\"timestamp\":\"" + System.currentTimeMillis() + "\"}";
- * EasyNet.sendPacket("chat_message", chatData);
- *
- * @author letsmanuel
- * @version 2.1 - Obfuscation-Safe API
- * @since Minecraft 1.21+ / Fabric
- */
-
 package net.letsmanuel.easynet.network;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
@@ -160,6 +21,7 @@ import java.util.function.Consumer;
 public class EasyNet {
     private static final Map<String, CustomPayload.Id<EasyNetPayload>> PACKET_IDS = new ConcurrentHashMap<>();
     private static final Map<String, BiConsumer<ServerPlayerEntity, String>> SERVER_HANDLERS = new ConcurrentHashMap<>();
+    private static final Map<String, BiConsumer<Object, String>> LEGACY_SERVER_HANDLERS = new ConcurrentHashMap<>();
     private static final Map<String, Consumer<String>> CLIENT_HANDLERS = new ConcurrentHashMap<>();
     private static final Map<String, ServerPlayerEntity> REGISTERED_PLAYERS = new ConcurrentHashMap<>();
     private static final Set<CustomPayload.Id<EasyNetPayload>> REGISTERED_S2C = ConcurrentHashMap.newKeySet();
@@ -218,13 +80,13 @@ public class EasyNet {
         if (playerObj == null) {
             return null;
         }
-
+        
         try {
             // Direct cast - this works even with obfuscated class names
             // because the JVM type system is preserved
             return (ServerPlayerEntity) playerObj;
         } catch (ClassCastException e) {
-            logError("Invalid player object type: " + playerObj.getClass().getSimpleName() +
+            logError("Invalid player object type: " + playerObj.getClass().getSimpleName() + 
                     " - Expected ServerPlayerEntity or its obfuscated equivalent");
             return null;
         }
@@ -283,7 +145,35 @@ public class EasyNet {
             registerPayloadTypeSafe(packetId, true);
 
             EasyNetPayload payload = new EasyNetPayload(packetName, content);
-            ServerPlayNetworking.sendToAll(payload);
+            
+            // Send to all players manually since sendToAll might not be available in all versions
+            for (ServerPlayerEntity player : REGISTERED_PLAYERS.values()) {
+                if (player != null && !player.isDisconnected()) {
+                    ServerPlayNetworking.send(player, payload);
+                }
+            }
+        } catch (Exception e) {
+            logError("Failed to broadcast packet '" + packetName + "': " + e.getMessage());
+        }
+    }
+
+    /**
+     * Send a packet to all connected players on a specific server
+     * @param server The minecraft server instance
+     * @param packetName Unique identifier for the packet type
+     * @param content String data to send
+     */
+    public static void broadcastPacketToAllClients(MinecraftServer server, String packetName, String content) {
+        try {
+            CustomPayload.Id<EasyNetPayload> packetId = getOrCreatePacketId(packetName);
+            registerPayloadTypeSafe(packetId, true);
+
+            EasyNetPayload payload = new EasyNetPayload(packetName, content);
+            
+            // Send to all players on the server
+            for (ServerPlayerEntity player : PlayerLookup.all(server)) {
+                ServerPlayNetworking.send(player, payload);
+            }
         } catch (Exception e) {
             logError("Failed to broadcast packet '" + packetName + "': " + e.getMessage());
         }
@@ -312,9 +202,11 @@ public class EasyNet {
                     return;
                 }
 
-                // Get the handler
+                // Check for new-style handler first
                 BiConsumer<ServerPlayerEntity, String> registeredHandler = SERVER_HANDLERS.get(receivedPacketName);
-                if (registeredHandler == null) {
+                BiConsumer<Object, String> legacyHandler = LEGACY_SERVER_HANDLERS.get(receivedPacketName);
+                
+                if (registeredHandler == null && legacyHandler == null) {
                     logError("No handler registered for packet '" + receivedPacketName + "'");
                     return;
                 }
@@ -322,7 +214,11 @@ public class EasyNet {
                 // Execute on server thread for thread safety
                 executeOnServerThread(player, () -> {
                     try {
-                        registeredHandler.accept(player, data);
+                        if (registeredHandler != null) {
+                            registeredHandler.accept(player, data);
+                        } else {
+                            legacyHandler.accept(player, data);
+                        }
                     } catch (Exception e) {
                         logError("Error in server packet handler '" + receivedPacketName + "': " + e.getMessage());
                         e.printStackTrace();
@@ -443,8 +339,8 @@ public class EasyNet {
         if (player == null) {
             return "{\"x\":0,\"y\":0,\"z\":0}";
         }
-        return String.format("{\"x\":%.2f,\"y\":%.2f,\"z\":%.2f}",
-                player.getX(), player.getY(), player.getZ());
+        return String.format("{\"x\":%.2f,\"y\":%.2f,\"z\":%.2f}", 
+                           player.getX(), player.getY(), player.getZ());
     }
 
     /**
@@ -627,6 +523,20 @@ public class EasyNet {
     // ════════════════════════════════════════════════════════════════════════════════
 
     /**
+     * Register a handler for incoming client packets (Legacy version with Object parameter)
+     * @param packetName Unique identifier for the packet type
+     * @param handler Callback function (Object player, String data) - use getPlayerName(), etc. for player info
+     */
+    public static void registerLegacyServerPacketHandler(String packetName, BiConsumer<Object, String> handler) {
+        LEGACY_SERVER_HANDLERS.put(packetName, handler);
+        CustomPayload.Id<EasyNetPayload> packetId = getOrCreatePacketId(packetName);
+        registerPayloadTypeSafe(packetId, false);
+
+        // The actual receiver is already registered in registerServerPacketHandler
+        // This method just adds the legacy handler to the map
+    }
+
+    /**
      * @deprecated Use sendPacketToServer instead
      */
     @Deprecated
@@ -635,15 +545,7 @@ public class EasyNet {
     }
 
     /**
-     * @deprecated Use registerServerPacketHandler with proper typing instead
-     */
-    @Deprecated
-    public static void registerServerPacketHandler(String packetName, BiConsumer<Object, String> handler) {
-        registerServerPacketHandler(packetName, (player, data) -> handler.accept(player, data));
-    }
-
-    /**
-     * @deprecated Use safePlayerCast internally - not needed for external use
+     * @deprecated Use safePlayerCast internally - not needed for external use anymore
      */
     @Deprecated
     public static ServerPlayerEntity castToServerPlayer(Object playerObj) {
