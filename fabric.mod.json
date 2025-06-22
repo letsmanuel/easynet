@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "easynet",
+	"version": "${version}",
+	"name": "EasyNet",
+	"description": "Simple networking library for Fabric mods.",
+	"authors": ["letsmanuel"],
+	"license": "MIT",
+	"environment": "*",
+	"depends": {
+		"fabricloader": ">=0.15.0",
+		"minecraft": "1.21"
+	},
+	"provides": ["easynet"]
+}
