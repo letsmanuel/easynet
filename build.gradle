@@ -10,14 +10,11 @@ buildscript {
         classpath 'net.fabricmc:fabric-loom:1.9.2'
     }
 }
-
-
 apply plugin: 'fabric-loom'
 apply plugin: 'maven-publish'
 
 version = project.mod_version
 group = project.maven_group
-
 
 base {
 	archivesName = project.archives_base_name
@@ -32,14 +29,12 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
 	modImplementation "net.fabricmc.fabric-api:fabric-api:0.99.5+1.21"
 	// Add more APIs as needed from https://github.com/FabricMC/fabric#modules
 }
 
 processResources {
 	inputs.property "version", project.version
-
 	filesMatching("fabric.mod.json") {
 		expand "version": inputs.properties.version
 	}
@@ -50,7 +45,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 java {
-	withSourcesJar()
+	// Entferne withSourcesJar() da wir eine custom sources jar erstellen
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
 }
@@ -64,9 +59,15 @@ jar {
 	archiveClassifier = 'dev'
 }
 
+// Create a custom sources jar task that doesn't depend on remapping
+task customSourcesJar(type: Jar) {
+	from sourceSets.main.allSource
+	archiveClassifier = 'sources'
+}
+
 // Disable remapping tasks to prevent obfuscation/class name changes
 remapJar.enabled = false
-remapSourcesJar.enabled = true
+remapSourcesJar.enabled = false
 
 publishing {
 	publications {
@@ -75,11 +76,9 @@ publishing {
 			artifactId = project.archives_base_name
 			version = project.mod_version
 			
-			from components.java
-			
 			// Publish the unobfuscated jar for development use
 			artifact jar
-			artifact sourcesJar
+			artifact customSourcesJar
 		}
 	}
 	
