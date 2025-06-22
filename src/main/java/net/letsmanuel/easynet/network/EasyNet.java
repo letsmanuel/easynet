@@ -259,9 +259,8 @@ public class EasyNet {
 
         ServerPlayNetworking.registerGlobalReceiver(packetId, (payload, context) -> {
             try {
-                EasyNetPayload easyPayload = (EasyNetPayload) payload;
-                String data = easyPayload.getData();
-                String packetNameFromPayload = easyPayload.getPacketName();
+                String data = payload.getData();
+                String packetNameFromPayload = payload.getPacketName();
 
                 // Get the actual player entity from the context
                 ServerPlayerEntity player = context.player();
@@ -276,7 +275,7 @@ public class EasyNet {
                 BiConsumer<ServerPlayerEntity, String> registeredHandler = SERVER_HANDLERS.get(packetNameFromPayload);
                 if (registeredHandler != null) {
                     // Execute on the server thread to ensure thread safety
-                    context.server().execute(() -> {
+                    player.getServer().execute(() -> {
                         try {
                             registeredHandler.accept(player, data);
                         } catch (Exception handlerException) {
@@ -330,9 +329,8 @@ public class EasyNet {
 
         ClientPlayNetworking.registerGlobalReceiver(packetId, (payload, context) -> {
             try {
-                EasyNetPayload easyPayload = (EasyNetPayload) payload;
-                String data = easyPayload.getData();
-                String packetNameFromPayload = easyPayload.getPacketName();
+                String data = payload.getData();
+                String packetNameFromPayload = payload.getPacketName();
 
                 // Call the registered handler with string data
                 Consumer<String> registeredHandler = CLIENT_HANDLERS.get(packetNameFromPayload);
