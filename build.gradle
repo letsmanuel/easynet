@@ -14,59 +14,99 @@ buildscript {
 apply plugin: 'fabric-loom'
 apply plugin: 'maven-publish'
 
-
 version = project.mod_version
 group = project.maven_group
 
 base {
-	archivesName = project.archives_base_name
+    archivesName = project.archives_base_name
 }
 
 repositories {
-	mavenCentral()
-	maven { url = "https://maven.fabricmc.net/" }
+    mavenCentral()
+    maven { url = "https://maven.fabricmc.net/" }
+    maven { url = "https://jitpack.io" }
+}
+
+loom {
+    // This helps with cross-environment compatibility
+    runs {
+        client {
+            property "fabric.development", "true"
+        }
+    }
 }
 
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-	modImplementation "net.fabricmc.fabric-api:fabric-api:0.99.5+1.21"
-	// Add more APIs as needed from https://github.com/FabricMC/fabric#modules
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:intermediary:${project.minecraft_version}"  // Using intermediary for better library compatibility
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    
+    // Optional: Add Fabric API if you need it for your library
+    // modImplementation "net.fabricmc:fabric-api:${project.fabric_version}"
 }
 
 processResources {
-	inputs.property "version", project.version
+    inputs.property "version", project.version
 
-	filesMatching("fabric.mod.json") {
-		expand "version": inputs.properties.version
-	}
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+    it.options.release = 21
 }
 
 java {
-	withSourcesJar()
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {
-	from("LICENSE") {
-		rename { "${it}_${project.archives_base_name}" }
-	}
+    from("LICENSE") {
+        rename { "${it}_${project.archives_base_name}" }
+    }
+    
+    // Ensure proper manifest for library usage
+    manifest {
+        attributes(
+            'Fabric-Loom-Remap': 'true'
+        )
+    }
+}
+
+// Configure remapping for library distribution
+remapJar {
+    addNestedDependencies = false
 }
 
 publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			groupId = project.maven_group
-			artifactId = project.archives_base_name
-			version = project.mod_version
-			from components.java
-		}
-	}
+    publications {
+        create("mavenJava", MavenPublication) {
+            groupId = project.maven_group
+            artifactId = project.archives_base_name
+            version = project.mod_version
+            
+            from components.java
+            
+            // Publish the remapped jars for proper compatibility
+            artifact remapJar
+            artifact remapSourcesJar
+        }
+    }
+    
+    // Optional: Configure repositories for publishing
+    repositories {
+        // Add your publishing repositories here
+        // Example for GitHub Packages:
+        // maven {
+        //     name = "GitHubPackages"
+        //     url = "https://maven.pkg.github.com/yourusername/yourrepo"
+        //     credentials {
+        //         username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+        //         password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+        //     }
+        // }
+    }
 }
