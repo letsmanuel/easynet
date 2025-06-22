@@ -33,8 +33,8 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API with BOM for clean dependency handling
-	modImplementation(enforcedPlatform("net.fabricmc.fabric-api:fabric-api-bom:${project.fabric_version}"))
-	modImplementation "net.fabricmc.fabric-api:fabric-network-api-v1"
+	modImplementation(enforcedPlatform("net.fabricmc.fabric-api:fabric-api-bom:0.100.0+1.21.1"))
+	modImplementation "net.fabricmc.fabric-api:fabric-network-api-v1:5.0.0%2Bd32f812d9c"
 	// Add more APIs as needed from https://github.com/FabricMC/fabric#modules
 }
 
