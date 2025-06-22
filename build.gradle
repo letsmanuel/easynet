@@ -32,9 +32,7 @@ dependencies {
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	// Fabric API with BOM for clean dependency handling
-	modPlatform "net.fabricmc.fabric-api:fabric-api-bom:0.99.5+1.21"
-	modImplementation "net.fabricmc.fabric-api:fabric-network-api-v1:5.0.0+d32f812d9c"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:0.99.5+1.21"
 	// Add more APIs as needed from https://github.com/FabricMC/fabric#modules
 }
 
