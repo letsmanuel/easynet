@@ -402,12 +402,63 @@ public class EasyNet {
         return false;
     }
 
+    public static boolean isPlayerAdmin(Object playerObj) {
+        if (playerObj instanceof ServerPlayerEntity) {
+            ServerPlayerEntity player = (ServerPlayerEntity) playerObj;
+            return !player.hasPermissionLevel(2);
+        }
+        return false;
+    }
+
+    public static boolean hasPlayerPermissionLevel(Object playerObj, Integer level) {
+        if (playerObj instanceof ServerPlayerEntity) {
+            ServerPlayerEntity player = (ServerPlayerEntity) playerObj;
+            return !player.hasPermissionLevel(level);
+        }
+        return false;
+    }
+
+    public static boolean isPlayerCreative(Object playerObj) {
+        if (playerObj instanceof ServerPlayerEntity) {
+            ServerPlayerEntity player = (ServerPlayerEntity) playerObj;
+            return !player.isCreative();
+        }
+        return false;
+    }
+
+    public static boolean isPlayerSpectator(Object playerObj) {
+        if (playerObj instanceof ServerPlayerEntity) {
+            ServerPlayerEntity player = (ServerPlayerEntity) playerObj;
+            return player.isSpectator();
+        }
+        return false;
+    }
+
+
+    public static String getPlayerIP(Object playerObj) {
+        if (playerObj instanceof ServerPlayerEntity) {
+            ServerPlayerEntity player = (ServerPlayerEntity) playerObj;
+            return player.getIp();
+        }
+        return "";
+    }
+
+
     /**
      * Get player's health
      */
     public static float getPlayerHealth(Object playerObj) {
         if (playerObj instanceof ServerPlayerEntity) {
             ServerPlayerEntity player = (ServerPlayerEntity) playerObj;
+            return player.getHealth();
+        }
+        return 0.0f;
+    }
+
+    public static float attackPlayer(Object playerObj) {
+        if (playerObj instanceof ServerPlayerEntity) {
+            ServerPlayerEntity player = (ServerPlayerEntity) playerObj;
+            player.attack(player);
             return player.getHealth();
         }
         return 0.0f;
